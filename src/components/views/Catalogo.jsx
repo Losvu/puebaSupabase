@@ -1,6 +1,6 @@
 import React from 'react';
 
-const RutaProtegida = () => {
+const Catalogo = () => {
   return (
     <div>
       <h1>Catálogo de Productos</h1>
@@ -8,4 +8,4 @@ const RutaProtegida = () => {
   );
 };
 
-export default RutaProtegida;
+export default Catalogo;
