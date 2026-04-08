@@ -73,8 +73,8 @@ const Categorias = () => {
     }
   };
 
-  return (
-    <Container className="mt-3">
+ return (
+    <Container className="pt-5 mt-5">
       {/* Título y botón Nueva Categoría */}
       <Row className="align-items-center mb-3">
         <Col xs={9} sm={7} md={7} lg={7} className="d-flex align-items-center">

@@ -7,9 +7,7 @@ const ModalRegistroCategoria = ({
   nuevaCategoria,
   manejoCambioInput,
   agregarCategoria,
-  
 }) => {
-
   const [deshabilitado, setDeshabilitado] = useState(false);
 
   const handleRegistrar = async () => {
@@ -62,12 +60,13 @@ const ModalRegistroCategoria = ({
         <Button variant="secondary" onClick={() => setMostrarModal(false)}>
           Cancelar
         </Button>
+        {/* REVISA ESTA LÍNEA: Si el nombre está vacío, el botón se deshabilita */}
         <Button
           variant="primary"
           onClick={handleRegistrar}
-          disabled={nuevaCategoria.nombre_categoria.trim() === "" || deshabilitado}
+          disabled={!nuevaCategoria.nombre_categoria.trim() || deshabilitado}
         >
-          Guardar
+          {deshabilitado ? "Guardando..." : "Guardar"}
         </Button>
       </Modal.Footer>
     </Modal>
