@@ -1,18 +1,80 @@
-import React, { useState } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
 import { supabase } from "../database/supabaseconfig";
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Button, Spinner } from "react-bootstrap";
 
 import ModalRegistroCategoria from "../categorias/ModalRegistroCategoria";
 import NotificacionOperacion from "../NotificacionOperacion";
+import TablaCategorias from "../categorias/TablaCategorias";
 
 const Categorias = () => {
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "" });
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [categorias, setCategorias] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [mostrarModalEliminacion, setMostrarModalEliminacion] = useState(false);
+  const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
+  const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
 
   const [nuevaCategoria, setNuevaCategoria] = useState({
     nombre_categoria: "",
     descripcion_categoria: "",
   });
+
+  const [categoriaEditar, setCategoriaEditar] = useState({
+    id_categoria: "",
+    nombre_categoria: "",
+    descripcion_categoria: "",
+  });
+
+  useEffect(() => {
+    cargarCategorias();
+  }, []);
+
+  // --- FUNCIONES / LÓGICA ---
+  const cargarCategorias = async () => {
+    try {
+      setCargando(true);
+      const { data, error } = await supabase
+        .from("categorias")
+        .select("*")
+        .order("id_categoria", { ascending: true });
+
+      if (error) {
+        console.error("Error al cargar categorías:", error.message);
+        setToast({
+          mostrar: true,
+          mensaje: "Error al cargar categorías.",
+          tipo: "error",
+        });
+        return;
+      }
+
+      setCategorias(data || []);
+    } catch (err) {
+      console.error("Excepción al cargar categorías:", err.message);
+      setToast({
+        mostrar: true,
+        mensaje: "Error inesperado al cargar categorías.",
+        tipo: "error",
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const abrirModalEdicion = (categoria) => {
+    setCategoriaEditar({
+      id_categoria: categoria.id_categoria,
+      nombre_categoria: categoria.nombre_categoria,
+      descripcion_categoria: categoria.descripcion_categoria,
+    });
+    setMostrarModalEdicion(true);
+  };
+
+  const abrirModalEliminacion = (categoria) => {
+    setCategoriaAEliminar(categoria);
+    setMostrarModalEliminacion(true);
+  };
 
   const manejoCambioInput = (e) => {
     const { name, value } = e.target;
@@ -53,16 +115,15 @@ const Categorias = () => {
         return;
       }
 
-      // Éxito
       setToast({
         mostrar: true,
         mensaje: `Categoría "${nuevaCategoria.nombre_categoria}" registrada exitosamente.`,
         tipo: "exito",
       });
 
-      // Limpiar formulario y cerrar modal
       setNuevaCategoria({ nombre_categoria: "", descripcion_categoria: "" });
       setMostrarModal(false);
+      cargarCategorias(); // Recargar lista tras agregar
     } catch (err) {
       console.error("Excepción al agregar categoría:", err.message);
       setToast({
@@ -73,7 +134,8 @@ const Categorias = () => {
     }
   };
 
- return (
+  // --- RENDERIZADO ---
+  return (
     <Container className="pt-5 mt-5">
       {/* Título y botón Nueva Categoría */}
       <Row className="align-items-center mb-3">
@@ -83,10 +145,7 @@ const Categorias = () => {
           </h3>
         </Col>
         <Col xs={3} sm={5} md={5} lg={5} className="text-end">
-          <Button
-            onClick={() => setMostrarModal(true)}
-            size="md"
-          >
+          <Button onClick={() => setMostrarModal(true)} size="md">
             <i className="bi-plus-lg"></i>
             <span className="d-none d-sm-inline ms-2">Nueva Categoría</span>
           </Button>
@@ -94,6 +153,29 @@ const Categorias = () => {
       </Row>
 
       <hr />
+
+      {/* Spinner mientras se cargan las categorías */}
+      {cargando && (
+        <Row className="text-center my-5">
+          <Col>
+            <Spinner animation="border" variant="success" size="lg" />
+            <p className="mt-3 text-muted">Cargando categorías...</p>
+          </Col>
+        </Row>
+      )}
+
+      {/* Lista de categorías cargadas */}
+      {!cargando && categorias.length > 0 && (
+        <Row>
+          <Col lg={12} className="d-none d-lg-block">
+            <TablaCategorias
+              categorias={categorias}
+              abrirModalEdicion={abrirModalEdicion}
+              abrirModalEliminacion={abrirModalEliminacion}
+            />
+          </Col>
+        </Row>
+      )}
 
       {/* Modal de Registro */}
       <ModalRegistroCategoria
