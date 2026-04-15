@@ -5,6 +5,7 @@ import { Container, Row, Col, Button, Spinner } from "react-bootstrap";
 import ModalRegistroCategoria from "../categorias/ModalRegistroCategoria";
 import NotificacionOperacion from "../NotificacionOperacion";
 import TablaCategorias from "../categorias/TablaCategorias";
+import TarjetaCategoria from "../categorias/TarjetaCategoria";
 
 const Categorias = () => {
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "" });
@@ -135,18 +136,18 @@ const Categorias = () => {
   };
 
   // --- RENDERIZADO ---
-  return (
+return (
     <Container className="pt-5 mt-5">
       {/* Título y botón Nueva Categoría */}
       <Row className="align-items-center mb-3">
         <Col xs={9} sm={7} md={7} lg={7} className="d-flex align-items-center">
           <h3 className="mb-0">
-            <i className="bi-bookmark-plus-fill me-2"></i> Categorías
+            <i className="bi bi-bookmark-plus-fill me-2"></i> Categorías
           </h3>
         </Col>
         <Col xs={3} sm={5} md={5} lg={5} className="text-end">
           <Button onClick={() => setMostrarModal(true)} size="md">
-            <i className="bi-plus-lg"></i>
+            <i className="bi bi-plus-lg"></i>
             <span className="d-none d-sm-inline ms-2">Nueva Categoría</span>
           </Button>
         </Col>
@@ -167,8 +168,18 @@ const Categorias = () => {
       {/* Lista de categorías cargadas */}
       {!cargando && categorias.length > 0 && (
         <Row>
+          {/* Vista Tabla para Desktop */}
           <Col lg={12} className="d-none d-lg-block">
             <TablaCategorias
+              categorias={categorias}
+              abrirModalEdicion={abrirModalEdicion}
+              abrirModalEliminacion={abrirModalEliminacion}
+            />
+          </Col>
+
+          {/* Bloque TarjetaCategoria solicitado */}
+          <Col xs={12} sm={12} md={12} className="d-lg-none">
+            <TarjetaCategoria
               categorias={categorias}
               abrirModalEdicion={abrirModalEdicion}
               abrirModalEliminacion={abrirModalEliminacion}
