@@ -6,6 +6,8 @@ import ModalRegistroCategoria from "../categorias/ModalRegistroCategoria";
 import NotificacionOperacion from "../NotificacionOperacion";
 import TablaCategorias from "../categorias/TablaCategorias";
 import TarjetaCategoria from "../categorias/TarjetaCategoria";
+import ModalEdicionCategoria from "../categorias/ModalEdicionCategoria";
+import ModalEliminacionCategoria from "../categorias/ModalEliminacionCategoria";
 
 const Categorias = () => {
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "" });
@@ -136,7 +138,7 @@ const Categorias = () => {
   };
 
   // --- RENDERIZADO ---
-return (
+  return (
     <Container className="pt-5 mt-5">
       {/* Título y botón Nueva Categoría */}
       <Row className="align-items-center mb-3">
@@ -203,6 +205,24 @@ return (
         mensaje={toast.mensaje}
         tipo={toast.tipo}
         onCerrar={() => setToast({ ...toast, mostrar: false })}
+      />
+      <ModalEdicionCategoria
+        mostrarModalEdicion={mostrarModalEdicion}
+        setMostrarModalEdicion={setMostrarModalEdicion}
+        categoriaEditar={categoriaEditar}
+        setCategoriaEditar={setCategoriaEditar}
+        setToast={setToast}
+        supabase={supabase}
+        cargarCategorias={cargarCategorias}
+      />
+
+      <ModalEliminacionCategoria
+        mostrarModalEliminacion={mostrarModalEliminacion}
+        setMostrarModalEliminacion={setMostrarModalEliminacion}
+        categoria={categoriaAEliminar}
+        supabase={supabase}
+        setToast={setToast}
+        cargarCategorias={cargarCategorias}
       />
     </Container>
   );
