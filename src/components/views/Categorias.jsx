@@ -1,6 +1,6 @@
 import { supabase } from "../database/supabaseconfig";
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Button, Spinner, Alert } from "react-bootstrap";
 
 import ModalRegistroCategoria from "../categorias/ModalRegistroCategoria";
 import NotificacionOperacion from "../NotificacionOperacion";
@@ -8,6 +8,9 @@ import TablaCategorias from "../categorias/TablaCategorias";
 import TarjetaCategoria from "../categorias/TarjetaCategoria";
 import ModalEdicionCategoria from "../categorias/ModalEdicionCategoria";
 import ModalEliminacionCategoria from "../categorias/ModalEliminacionCategoria";
+
+import CuadroBusquedas from "../busquedas/CuadroBusquedas";
+import Paginacion from "../ordenamiento/paginacion";
 
 const Categorias = () => {
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "" });
@@ -17,6 +20,12 @@ const Categorias = () => {
   const [mostrarModalEliminacion, setMostrarModalEliminacion] = useState(false);
   const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
   const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
+
+  const [textoBusqueda, setTextoBusqueda] = useState("");
+  const [categoriasFiltradas, setCategoriasFiltradas] = useState([]);
+  const [registrosPorPagina, establecerRegistrosPorPagina] = useState(5);
+  const [paginaActual, establecerPaginaActual] = useState(1);
+
 
   const [nuevaCategoria, setNuevaCategoria] = useState({
     nombre_categoria: "",
@@ -29,11 +38,33 @@ const Categorias = () => {
     descripcion_categoria: "",
   });
 
+  const categoriasPaginadas = categoriasFiltradas.slice(
+    (paginaActual - 1) * registrosPorPagina,
+    paginaActual * registrosPorPagina
+  );
+
   useEffect(() => {
     cargarCategorias();
   }, []);
 
-  // --- FUNCIONES / LÓGICA ---
+  useEffect(() => {
+    if (!textoBusqueda.trim()) {
+      setCategoriasFiltradas(categorias);
+    } else {
+      const textoLower = textoBusqueda.toLowerCase().trim();
+      const filtradas = categorias.filter(
+        (cat) =>
+          cat.nombre_categoria.toLowerCase().includes(textoLower) ||
+          (cat.descripcion_categoria && cat.descripcion_categoria.toLowerCase().includes(textoLower))
+      );
+      setCategoriasFiltradas(filtradas);
+    }
+  }, [textoBusqueda, categorias]);
+
+  const manejarBusqueda = (e) => {
+    setTextoBusqueda(e.target.value);
+  };
+
   const cargarCategorias = async () => {
     try {
       setCargando(true);
@@ -44,22 +75,13 @@ const Categorias = () => {
 
       if (error) {
         console.error("Error al cargar categorías:", error.message);
-        setToast({
-          mostrar: true,
-          mensaje: "Error al cargar categorías.",
-          tipo: "error",
-        });
+        setToast({ mostrar: true, mensaje: "Error al cargar categorías.", tipo: "error" });
         return;
       }
-
       setCategorias(data || []);
     } catch (err) {
       console.error("Excepción al cargar categorías:", err.message);
-      setToast({
-        mostrar: true,
-        mensaje: "Error inesperado al cargar categorías.",
-        tipo: "error",
-      });
+      setToast({ mostrar: true, mensaje: "Error inesperado al cargar categorías.", tipo: "error" });
     } finally {
       setCargando(false);
     }
@@ -81,66 +103,40 @@ const Categorias = () => {
 
   const manejoCambioInput = (e) => {
     const { name, value } = e.target;
-    setNuevaCategoria((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setNuevaCategoria((prev) => ({ ...prev, [name]: value }));
   };
 
   const agregarCategoria = async () => {
     try {
-      if (
-        !nuevaCategoria.nombre_categoria.trim() ||
-        !nuevaCategoria.descripcion_categoria.trim()
-      ) {
-        setToast({
-          mostrar: true,
-          mensaje: "Debe llenar todos los campos.",
-          tipo: "advertencia",
-        });
+      if (!nuevaCategoria.nombre_categoria.trim() || !nuevaCategoria.descripcion_categoria.trim()) {
+        setToast({ mostrar: true, mensaje: "Debe llenar todos los campos.", tipo: "advertencia" });
         return;
       }
-
       const { error } = await supabase.from("categorias").insert([
         {
           nombre_categoria: nuevaCategoria.nombre_categoria,
           descripcion_categoria: nuevaCategoria.descripcion_categoria,
         },
       ]);
-
       if (error) {
-        console.error("Error al agregar categoría:", error.message);
-        setToast({
-          mostrar: true,
-          mensaje: "Error al registrar categoría.",
-          tipo: "error",
-        });
+        setToast({ mostrar: true, mensaje: "Error al registrar categoría.", tipo: "error" });
         return;
       }
-
       setToast({
         mostrar: true,
         mensaje: `Categoría "${nuevaCategoria.nombre_categoria}" registrada exitosamente.`,
         tipo: "exito",
       });
-
       setNuevaCategoria({ nombre_categoria: "", descripcion_categoria: "" });
       setMostrarModal(false);
-      cargarCategorias(); // Recargar lista tras agregar
+      cargarCategorias();
     } catch (err) {
-      console.error("Excepción al agregar categoría:", err.message);
-      setToast({
-        mostrar: true,
-        mensaje: "Error inesperado al registrar categoría.",
-        tipo: "error",
-      });
+      setToast({ mostrar: true, mensaje: "Error inesperado al registrar categoría.", tipo: "error" });
     }
   };
 
-  // --- RENDERIZADO ---
   return (
     <Container className="pt-5 mt-5">
-      {/* Título y botón Nueva Categoría */}
       <Row className="align-items-center mb-3">
         <Col xs={9} sm={7} md={7} lg={7} className="d-flex align-items-center">
           <h3 className="mb-0">
@@ -157,7 +153,27 @@ const Categorias = () => {
 
       <hr />
 
-      {/* Spinner mientras se cargan las categorías */}
+      <Row className="mb-4">
+        <Col md={6} lg={5}>
+          <CuadroBusquedas
+            textoBusqueda={textoBusqueda}
+            manejarCambioBusqueda={manejarBusqueda}
+            placeholder="Buscar por nombre o descripción..."
+          />
+        </Col>
+      </Row>
+
+      {!cargando && textoBusqueda.trim() && categoriasFiltradas.length === 0 && (
+        <Row className="mb-4">
+          <Col>
+            <Alert variant="info" className="text-center">
+              <i className="bi bi-info-circle me-2"></i>
+              No se encontraron categorías que coincidan con "{textoBusqueda}".
+            </Alert>
+          </Col>
+        </Row>
+      )}
+
       {cargando && (
         <Row className="text-center my-5">
           <Col>
@@ -167,22 +183,18 @@ const Categorias = () => {
         </Row>
       )}
 
-      {/* Lista de categorías cargadas */}
-      {!cargando && categorias.length > 0 && (
+      {!cargando && categoriasFiltradas.length > 0 && (
         <Row>
-          {/* Vista Tabla para Desktop */}
-          <Col lg={12} className="d-none d-lg-block">
-            <TablaCategorias
-              categorias={categorias}
+          <Col xs={12} className="d-lg-none">
+            <TarjetaCategoria
+              categorias={categoriasPaginadas}
               abrirModalEdicion={abrirModalEdicion}
               abrirModalEliminacion={abrirModalEliminacion}
             />
           </Col>
-
-          {/* Bloque TarjetaCategoria solicitado */}
-          <Col xs={12} sm={12} md={12} className="d-lg-none">
-            <TarjetaCategoria
-              categorias={categorias}
+          <Col lg={12} className="d-none d-lg-block">
+            <TablaCategorias
+              categorias={categoriasPaginadas}
               abrirModalEdicion={abrirModalEdicion}
               abrirModalEliminacion={abrirModalEliminacion}
             />
@@ -190,7 +202,6 @@ const Categorias = () => {
         </Row>
       )}
 
-      {/* Modal de Registro */}
       <ModalRegistroCategoria
         mostrarModal={mostrarModal}
         setMostrarModal={setMostrarModal}
@@ -199,13 +210,6 @@ const Categorias = () => {
         agregarCategoria={agregarCategoria}
       />
 
-      {/* Notificación */}
-      <NotificacionOperacion
-        mostrar={toast.mostrar}
-        mensaje={toast.mensaje}
-        tipo={toast.tipo}
-        onCerrar={() => setToast({ ...toast, mostrar: false })}
-      />
       <ModalEdicionCategoria
         mostrarModalEdicion={mostrarModalEdicion}
         setMostrarModalEdicion={setMostrarModalEdicion}
@@ -223,6 +227,22 @@ const Categorias = () => {
         supabase={supabase}
         setToast={setToast}
         cargarCategorias={cargarCategorias}
+      />
+      {/* Paginación */}
+      {categoriasFiltradas.length > 0 && (
+        <Paginacion
+          registrosPorPagina={registrosPorPagina}
+          totalRegistros={categoriasFiltradas.length}
+          paginaActual={paginaActual}
+          establecerPaginaActual={establecerPaginaActual}
+          establecerRegistrosPorPagina={establecerRegistrosPorPagina}
+        />
+      )}
+      <NotificacionOperacion
+        mostrar={toast.mostrar}
+        mensaje={toast.mensaje}
+        tipo={toast.tipo}
+        onCerrar={() => setToast({ ...toast, mostrar: false })}
       />
     </Container>
   );
