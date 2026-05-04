@@ -249,6 +249,8 @@ const Productos = () => {
     <Container className="mt-5">
       <Row className="align-items-center mb-4">
         <Col>
+         <Col>......</Col>
+          <Col>......</Col>
           <h3><i className="bi-bag-heart-fill me-2"></i> Productos</h3>
         </Col>
         <Col className="text-end">

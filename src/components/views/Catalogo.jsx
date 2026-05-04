@@ -87,16 +87,17 @@ const Catalogo = () => {
 
 
   return (
-    <div className="mt-3 px-1">
-      <Row className="text-center mb-1">
+    <div className="mt-5 px-3">
+      <Row className="text-center mb-4">
         <Col>
+         <Col>......</Col>
           <p className="lead text-muted">
             Nuestros productos de belleza
           </p>
         </Col>
       </Row>
 
-      <Row className="mb-1 align-items-end">
+      <Row className="mb-4 align-items-end">
         <Col md={4} lg={3} className="mb-2">
           <Form.Group controlId="filtroCategoria">
             <Form.Select
