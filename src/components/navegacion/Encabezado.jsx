@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Container, Nav, Navbar, Offcanvas } from 'react-bootstrap';
-import { supabase } from "../../database/supabaseconfig";
+import { supabase } from '../../database/supabaseconfig';
+import { useAuth } from "../../context/AuthContext";
 
-// Asegúrate de que la ruta a tu logo sea correcta
-import logo from "../../assets/react.svg"; 
+import logo from '../../assets/react.svg';
 
 const Encabezado = () => {
     const [mostrarMenu, setMostrarMenu] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
+    const { tienePermiso, logout, usuario } = useAuth();
 
     // Handlers
     const manejarToggle = () => setMostrarMenu(!mostrarMenu);
@@ -20,16 +21,9 @@ const Encabezado = () => {
     };
 
     const cerrarSesion = async () => {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-
-            localStorage.removeItem("usuario-supabase");
-            setMostrarMenu(false);
-            navigate("/login");
-        } catch (err) {
-            console.error("Error cerrando sesión:", err.message);
-        }
+        await logout();
+        setMostrarMenu(false);
+        navigate("/login");
     };
 
     // Lógica para detectar rutas y permisos
@@ -66,13 +60,16 @@ const Encabezado = () => {
         contenidoMenu = (
             <>
                 <Nav className="ms-auto pe-2">
-                    <Nav.Link
-                        onClick={() => manejarNavegacion("/")}
-                        className={mostrarMenu ? "color-texto-marca" : "text-white"}
-                    >
-                        {mostrarMenu && <i className="bi-house-fill me-2"></i>}
-                        <strong>Inicio</strong>
-                    </Nav.Link>
+                    {/* Se muestra Inicio si tiene el permiso o si no manejas permisos estrictos al principio */}
+                    {tienePermiso('ver_inicio') && (
+                        <Nav.Link
+                            onClick={() => manejarNavegacion("/")}
+                            className={mostrarMenu ? "color-texto-marca" : "text-white"}
+                        >
+                            {mostrarMenu && <i className="bi-house-fill me-2"></i>}
+                            <strong>Inicio</strong>
+                        </Nav.Link>
+                    )}
 
                     <Nav.Link
                         onClick={() => manejarNavegacion("/categorias")}
@@ -91,6 +88,22 @@ const Encabezado = () => {
                     </Nav.Link>
 
                     <Nav.Link
+                        onClick={() => manejarNavegacion("/clientes")}
+                        className={mostrarMenu ? "color-texto-marca" : "text-white"}
+                    >
+                        {mostrarMenu && <i className="bi-people-fill me-2"></i>}
+                        <strong>Clientes</strong>
+                    </Nav.Link>
+
+                    <Nav.Link
+                        onClick={() => manejarNavegacion("/empleados")}
+                        className={mostrarMenu ? "color-texto-marca" : "text-white"}
+                    >
+                        {mostrarMenu && <i className="bi-people-fill me-2"></i>}
+                        <strong>Empleados</strong>
+                    </Nav.Link>
+
+                    <Nav.Link
                         onClick={() => manejarNavegacion("/catalogo")}
                         className={mostrarMenu ? "color-texto-marca" : "text-white"}
                     >
@@ -98,9 +111,17 @@ const Encabezado = () => {
                         <strong>Catálogo</strong>
                     </Nav.Link>
 
+                    <Nav.Link
+                        onClick={() => manejarNavegacion("/permisos")}
+                        className={mostrarMenu ? "color-texto-marca" : "text-white"}
+                    >
+                        {mostrarMenu && <i className="bi-key-fill me-2"></i>}
+                        <strong>Permisos</strong>
+                    </Nav.Link>
+
                     <hr className="text-white d-md-none" />
 
-                    {/* Ícono de cerrar sesión rápido (solo visible si el menú está cerrado) */}
+                    {/* Ícono de cerrar sesión rápido (solo visible si el menú de pantalla completa está cerrado) */}
                     {!mostrarMenu && (
                         <Nav.Link onClick={cerrarSesion} className="text-white">
                             <i className="bi-box-arrow-right me-2"></i>
