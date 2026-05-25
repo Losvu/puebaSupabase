@@ -17,33 +17,63 @@ const ModalRegistroCliente = ({
     setDeshabilitado(false);
   };
 
-  const formularioInvalido = !nuevoCliente.nombre.trim() || !nuevoCliente.apellido.trim() || !nuevoCliente.celular.trim();
-
   return (
-    <Modal show={mostrarModal} onHide={() => setMostrarModal(false)} backdrop="static" keyboard={false} centered>
+    <Modal
+      show={mostrarModal}
+      onHide={() => setMostrarModal(false)}
+      backdrop="static"
+      keyboard={false}
+      centered
+    >
       <Modal.Header closeButton>
-        <Modal.Title><i className="bi bi-person-plus me-2"></i>Registrar Cliente</Modal.Title>
+        <Modal.Title>Agregar Nuevo Cliente</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
-            <Form.Label>Nombre</Form.Label>
-            <Form.Control type="text" name="nombre" value={nuevoCliente.nombre} onChange={manejoCambioInput} placeholder="Ej: Juan" />
+            <Form.Label>Nombre *</Form.Label>
+            <Form.Control
+              type="text"
+              name="nombre_cliente"
+              value={nuevoCliente.nombre_cliente}
+              onChange={manejoCambioInput}
+              placeholder="Ingresa el nombre"
+            />
           </Form.Group>
+
           <Form.Group className="mb-3">
             <Form.Label>Apellido</Form.Label>
-            <Form.Control type="text" name="apellido" value={nuevoCliente.apellido} onChange={manejoCambioInput} placeholder="Ej: Pérez" />
+            <Form.Control
+              type="text"
+              name="apellido_cliente"
+              value={nuevoCliente.apellido_cliente}
+              onChange={manejoCambioInput}
+              placeholder="Ingresa el apellido"
+            />
           </Form.Group>
+
           <Form.Group className="mb-3">
-            <Form.Label>Celular / Teléfono</Form.Label>
-            <Form.Control type="text" name="celular" value={nuevoCliente.celular} onChange={manejoCambioInput} placeholder="Ej: 88888888" />
+            <Form.Label>Celular *</Form.Label>
+            <Form.Control
+              type="tel"
+              name="celular"
+              value={nuevoCliente.celular}
+              onChange={manejoCambioInput}
+              placeholder="Ej: 505 1234 5678"
+            />
           </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={() => setMostrarModal(false)}>Cancelar</Button>
-        <Button variant="primary" onClick={handleRegistrar} disabled={formularioInvalido || deshabilitado}>
-          {deshabilitado ? "Guardando..." : "Guardar Cliente"}
+        <Button variant="secondary" onClick={() => setMostrarModal(false)}>
+          Cancelar
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleRegistrar}
+          disabled={!nuevoCliente.nombre_cliente.trim() || !nuevoCliente.celular.trim() || deshabilitado}
+        >
+          Guardar Cliente
         </Button>
       </Modal.Footer>
     </Modal>

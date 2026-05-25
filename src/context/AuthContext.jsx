@@ -16,7 +16,8 @@ export const AuthProvider = ({ children }) => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 setUsuario(session.user);
-                await cargarPermisosDelUsuario(session.user.id);
+                // CORRECCIÓN: Ahora pasamos también el email
+                await cargarPermisosDelUsuario(session.user.id, session.user.email);
             }
             setCargando(false);
         };
@@ -27,7 +28,8 @@ export const AuthProvider = ({ children }) => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session) {
                 setUsuario(session.user);
-                await cargarPermisosDelUsuario(session.user.id);
+                // CORRECCIÓN: Ahora pasamos también el email
+                await cargarPermisosDelUsuario(session.user.id, session.user.email);
             } else {
                 setUsuario(null);
                 setPermisos({});
@@ -39,34 +41,43 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, []);
 
-    // Función para buscar en Supabase qué permisos tiene el rol del usuario actual
-    const cargarPermisosDelUsuario = async (userId) => {
+    // Función interna para buscar el tipo de empleado y descargar su mapa de permisos JSONB de Supabase
+    const cargarPermisosDelUsuario = async (userId, userEmail) => {
         try {
-            // Nota: Aquí se asume que tienes una tabla de 'perfiles' o 'empleados' 
-            // que relaciona al userId con su 'rol'. Cambia esto según tu base de datos.
-            const { data: usuarioData, error: userError } = await supabase
-                .from('empleados') 
-                .select('rol, correo')
-                .eq('id_auth', userId) // O el campo con el que enlaces a Supabase Auth
+            // Guardamos el correo en el localStorage tal y como lo requiere tu sistema/guía
+            localStorage.setItem("usuario-supabase", userEmail);
+
+            // Buscamos en 'empleados' usando 'tipo_empleado' en lugar de 'rol'
+            const { data: empleadoData, error: empleadoError } = await supabase
+                .from('empleados')
+                .select('tipo_empleado')
+                .eq('id_auth', userId) 
                 .single();
 
-            if (usuarioData && usuarioData.rol) {
-                // Guardar correo en localStorage como pide tu guía
-                localStorage.setItem("usuario-supabase", usuarioData.correo);
+            if (empleadoError) throw empleadoError;
 
-                // Buscar los permisos de ese rol en la tabla que creaste en el punto 5
-                const { data: permisosData, error: permError } = await supabase
+            // Si encontramos el empleado y tiene asignado un tipo_empleado
+            if (empleadoData && empleadoData.tipo_empleado) {
+                
+                // Buscamos los permisos de ese tipo de empleado en la tabla 'permisos'
+                const { data: permisosData, error: permisosError } = await supabase
                     .from('permisos')
                     .select('permisos')
-                    .eq('rol', usuarioData.rol.toLowerCase())
+                    // Comparamos el rol de la tabla permisos con el tipo_empleado obtenido
+                    .eq('rol', empleadoData.tipo_empleado.toLowerCase()) 
                     .single();
 
+                if (permisosError) throw permisosError;
+
                 if (permisosData) {
+                    // Guardamos el objeto JSON con los booleanos (ver_inicio, ver_productos, etc.)
                     setPermisos(permisosData.permisos);
                 }
             }
         } catch (error) {
-            console.error("Error al cargar los permisos del contexto:", error);
+            console.error("Error cargando el tipo_empleado/permisos en AuthContext:", error);
+            // Si hay error, limpiamos los permisos por seguridad
+            setPermisos({});
         }
     };
 
@@ -78,13 +89,25 @@ export const AuthProvider = ({ children }) => {
         return !!permisos[nombrePermiso];
     };
 
+    // CORRECCIÓN: Función de inicio de sesión agregada
+    const login = async (email, password) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+        
+        if (error) throw error;
+        return data;
+    };
+
     // Función de cierre de sesión
     const logout = async () => {
         await supabase.auth.signOut();
     };
 
+    // CORRECCIÓN: Agregando 'login' al contexto de retorno
     return (
-        <AuthContext.Provider value={{ usuario, permisos, tienePermiso, logout }}>
+        <AuthContext.Provider value={{ usuario, permisos, tienePermiso, login, logout }}>
             {!cargando && children}
         </AuthContext.Provider>
     );

@@ -1,51 +1,76 @@
 import React, { useState } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
 
-const ModalEdicionCliente = ({ mostrarModalEdicion, setMostrarModalEdicion, clienteEditar, setClienteEditar, setToast, supabase, cargarClientes }) => {
-  const [cargando, setCargando] = useState(false);
+const ModalEdicionCliente = ({
+  mostrarModalEdicion,
+  setMostrarModalEdicion,
+  clienteEditar,
+  manejoCambioInputEdicion,
+  actualizarCliente,
+}) => {
+  const [deshabilitado, setDeshabilitado] = useState(false);
 
-  const manejarCambio = (e) => {
-    const { name, value } = e.target;
-    setClienteEditar({ ...clienteEditar, [name]: value });
-  };
-
-  const actualizarCliente = async () => {
-    setCargando(true);
-    const { error } = await supabase
-      .from("clientes")
-      .update({ nombre: clienteEditar.nombre, apellido: clienteEditar.apellido, celular: clienteEditar.celular })
-      .eq("id_cliente", clienteEditar.id_cliente);
-
-    if (error) {
-      setToast({ mostrar: true, mensaje: "Error al actualizar.", tipo: "error" });
-    } else {
-      setToast({ mostrar: true, mensaje: "Cliente actualizado con éxito.", tipo: "exito" });
-      setMostrarModalEdicion(false);
-      cargarClientes();
-    }
-    setCargando(false);
+  const handleActualizar = async () => {
+    if (deshabilitado) return;
+    setDeshabilitado(true);
+    await actualizarCliente();
+    setDeshabilitado(false);
   };
 
   return (
-    <Modal show={mostrarModalEdicion} onHide={() => setMostrarModalEdicion(false)} centered>
-      <Modal.Header closeButton><Modal.Title>Editar Cliente</Modal.Title></Modal.Header>
+    <Modal
+      show={mostrarModalEdicion}
+      onHide={() => setMostrarModalEdicion(false)}
+      backdrop="static"
+      keyboard={false}
+      centered
+    >
+      <Modal.Header closeButton>
+        <Modal.Title>Editar Cliente</Modal.Title>
+      </Modal.Header>
       <Modal.Body>
         <Form>
-          <Form.Group className="mb-3"><Form.Label>Nombre</Form.Label>
-            <Form.Control name="nombre" value={clienteEditar.nombre} onChange={manejarCambio} />
+          <Form.Group className="mb-3">
+            <Form.Label>Nombre *</Form.Label>
+            <Form.Control
+              type="text"
+              name="nombre_cliente"
+              value={clienteEditar.nombre_cliente}
+              onChange={manejoCambioInputEdicion}
+            />
           </Form.Group>
-          <Form.Group className="mb-3"><Form.Label>Apellido</Form.Label>
-            <Form.Control name="apellido" value={clienteEditar.apellido} onChange={manejarCambio} />
+
+          <Form.Group className="mb-3">
+            <Form.Label>Apellido</Form.Label>
+            <Form.Control
+              type="text"
+              name="apellido_cliente"
+              value={clienteEditar.apellido_cliente}
+              onChange={manejoCambioInputEdicion}
+            />
           </Form.Group>
-          <Form.Group className="mb-3"><Form.Label>Celular</Form.Label>
-            <Form.Control name="celular" value={clienteEditar.celular} onChange={manejarCambio} />
+
+          <Form.Group className="mb-3">
+            <Form.Label>Celular *</Form.Label>
+            <Form.Control
+              type="tel"
+              name="celular"
+              value={clienteEditar.celular}
+              onChange={manejoCambioInputEdicion}
+            />
           </Form.Group>
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={() => setMostrarModalEdicion(false)}>Cancelar</Button>
-        <Button variant="primary" onClick={actualizarCliente} disabled={cargando}>
-          {cargando ? "Actualizando..." : "Guardar Cambios"}
+        <Button variant="secondary" onClick={() => setMostrarModalEdicion(false)}>
+          Cancelar
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleActualizar}
+          disabled={!clienteEditar.nombre_cliente?.trim() || !clienteEditar.celular?.trim() || deshabilitado}
+        >
+          Actualizar Cliente
         </Button>
       </Modal.Footer>
     </Modal>

@@ -1,37 +1,66 @@
-import React from "react";
-import { Table, Button } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Table, Spinner, Button } from "react-bootstrap";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
-const TablaClientes = ({ clientes, abrirModalEdicion, abrirModalEliminacion }) => {
+const TablaClientes = ({
+  clientes,
+  abrirModalEdicion,
+  abrirModalEliminacion,
+}) => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(!(clientes && clientes.length > 0));
+  }, [clientes]);
+
   return (
-    <Table hover responsive className="shadow-sm">
-      <thead className="table-dark">
-        <tr>
-          <th>ID</th>
-          <th>Nombre Completo</th>
-          <th>Celular</th>
-          <th>Fecha Registro</th>
-          <th className="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {clientes.map((cli) => (
-          <tr key={cli.id_cliente}>
-            <td>{cli.id_cliente}</td>
-            <td>{cli.nombre} {cli.apellido}</td>
-            <td>{cli.celular}</td>
-            <td>{new Date(cli.fecha_registro).toLocaleDateString()}</td>
-            <td className="text-center">
-              <Button variant="outline-primary" size="sm" className="me-2" onClick={() => abrirModalEdicion(cli)}>
-                <i className="bi bi-pencil"></i>
-              </Button>
-              <Button variant="outline-danger" size="sm" onClick={() => abrirModalEliminacion(cli)}>
-                <i className="bi bi-trash"></i>
-              </Button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <>
+      {loading ? (
+        <div className="text-center">
+          <h4>Cargando clientes...</h4>
+          <Spinner animation="border" variant="success" role="status" />
+        </div>
+      ) : (
+        <Table striped borderless hover responsive size="sm">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>Celular</th>
+              <th className="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clientes.map((cliente) => (
+              <tr key={cliente.id_cliente}>
+                <td>{cliente.id_cliente}</td>
+                <td>{cliente.nombre_cliente}</td>
+                <td>{cliente.apellido_cliente || "—"}</td>
+                <td>{cliente.celular}</td>
+                <td className="text-center">
+                  <Button
+                    variant="outline-warning"
+                    size="sm"
+                    className="m-1"
+                    onClick={() => abrirModalEdicion(cliente)}
+                  >
+                    <i className="bi bi-pencil"></i>
+                  </Button>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => abrirModalEliminacion(cliente)}
+                  >
+                    <i className="bi bi-trash"></i>
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </>
   );
 };
 
