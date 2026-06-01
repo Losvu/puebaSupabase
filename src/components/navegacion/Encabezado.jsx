@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Container, Nav, Navbar, Offcanvas } from 'react-bootstrap';
 import { supabase } from '../../database/supabaseconfig';
 import { useAuth } from "../../context/AuthContext";
+import ChatIA from '../ia/ChatIA';
 
 import logo from '../../assets/react.svg';
 
@@ -11,6 +12,7 @@ const Encabezado = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { tienePermiso, logout, usuario } = useAuth();
+    const [mostrarChatIA, setMostrarChatIA] = useState(false);
 
     // Handlers
     const manejarToggle = () => setMostrarMenu(!mostrarMenu);
@@ -111,7 +113,7 @@ const Encabezado = () => {
                         <strong>Catálogo</strong>
                     </Nav.Link>
 
-                     <Nav.Link
+                    <Nav.Link
                         onClick={() => manejarNavegacion("/ventas")}
                         className={mostrarMenu ? "color-texto-marca" : "text-white"}
                     >
@@ -126,6 +128,10 @@ const Encabezado = () => {
                         {mostrarMenu && <i className="bi-key-fill me-2"></i>}
                         <strong>Permisos</strong>
                     </Nav.Link>
+                    <Nav.Link onClick={() => setMostrarChatIA(true)} className="text-white">
+                        <i className="bi bi-robot me-2"></i>
+                    </Nav.Link>
+                    <ChatIA mostrar={mostrarChatIA} onCerrar={() => setMostrarChatIA(false)} />
 
                     <hr className="text-white d-md-none" />
 
