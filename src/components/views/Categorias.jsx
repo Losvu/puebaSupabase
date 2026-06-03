@@ -1,6 +1,7 @@
 import { supabase } from "../database/supabaseconfig";
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Button, Spinner, Alert } from "react-bootstrap";
+import emailjs from '@emailjs/browser';
 
 import ModalRegistroCategoria from "../categorias/ModalRegistroCategoria";
 import NotificacionOperacion from "../NotificacionOperacion";
@@ -8,6 +9,7 @@ import TablaCategorias from "../categorias/TablaCategorias";
 import TarjetaCategoria from "../categorias/TarjetaCategoria";
 import ModalEdicionCategoria from "../categorias/ModalEdicionCategoria";
 import ModalEliminacionCategoria from "../categorias/ModalEliminacionCategoria";
+import ModalEnvioCorreoCategorias from "../categorias/ModalEnvioCorreoCategorias";
 
 import CuadroBusquedas from "../busquedas/CuadroBusquedas";
 import Paginacion from "../ordenamiento/paginacion";
@@ -25,6 +27,10 @@ const Categorias = () => {
   const [categoriasFiltradas, setCategoriasFiltradas] = useState([]);
   const [registrosPorPagina, establecerRegistrosPorPagina] = useState(5);
   const [paginaActual, establecerPaginaActual] = useState(1);
+  const [mostrarModalCorreo, setMostrarModalCorreo] = useState(false);
+  const [emailDestino, setEmailDestino] = useState("");
+  const [enviandoCorreo, setEnviandoCorreo] = useState(false);
+
 
 
   const [nuevaCategoria, setNuevaCategoria] = useState({
@@ -135,18 +141,105 @@ const Categorias = () => {
     }
   };
 
-  return (
-    <Container className="pt-5 mt-5">
+  // Inicializar EmailJS
+  useEffect(() => {
+    emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
+  }, []);
+
+  const abrirModalCorreo = () => {
+    setEmailDestino("");
+    setMostrarModalCorreo(true);
+  };
+
+  const formatearCategoriasParaCorreo = () => {
+    if (categorias.length === 0) return "No hay categorías registradas.";
+
+    let texto = `LISTADO DE CATEGORÍAS\n\n`;
+    texto += `Fecha: ${new Date().toLocaleDateString("es-NI")}\n`;
+    texto += `Total de categorías: ${categorias.length}\n\n`;
+
+    categorias.forEach((cat, index) => {
+      texto += `${index + 1}. ${cat.nombre_categoria}\n`;
+      if (cat.descripcion_categoria) {
+        texto += `   Descripción: ${cat.descripcion_categoria}\n`;
+      }
+      texto += `\n`;
+    });
+
+    return texto;
+  };
+
+  const enviarCorreoCategorias = () => {
+    if (!emailDestino.trim()) {
+      setToast({
+        mostrar: true,
+        mensaje: "Por favor ingresa un correo destino.",
+        tipo: "advertencia",
+      });
+      return;
+    }
+
+    setEnviandoCorreo(true);
+
+    const mensaje = formatearCategoriasParaCorreo();
+
+    const templateParams = {
+      to_name: "Administrador",
+      user_email: emailDestino,
+      message: mensaje,
+      fecha_envio: new Date().toLocaleDateString("es-NI")
+    };
+    emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+      templateParams
+    )
+      .then(() => {
+        setToast({
+          mostrar: true,
+          mensaje: "Correo enviado correctamente.",
+          tipo: "exito",
+        });
+        setMostrarModalCorreo(false);
+        setEmailDestino("");
+      })
+      .catch((error) => {
+        console.error("Error EmailJS:", error);
+        setToast({
+          mostrar: true,
+          mensaje: "Error al enviar el correo.",
+          tipo: "error",
+        });
+      })
+      .finally(() => {
+        setEnviandoCorreo(false);
+      });
+  };
+
+return (
+    /* Agregamos un extra de margen/padding superior aquí para que el navbar fijo no tape la fila */
+    <Container className="pt-5 mt-md-5 mt-4">
+      
+      {/* Tu nueva fila con los tres botones agregada de forma exacta */}
       <Row className="align-items-center mb-3">
-        <Col xs={9} sm={7} md={7} lg={7} className="d-flex align-items-center">
+        <Col xs={8} sm={8} md={8} lg={8} className="d-flex align-items-center">
           <h3 className="mb-0">
-            <i className="bi bi-bookmark-plus-fill me-2"></i> Categorías
+            <i className="bi-bookmark-plus-fill me-2"></i> Categorías
           </h3>
         </Col>
-        <Col xs={3} sm={5} md={5} lg={5} className="text-end">
-          <Button onClick={() => setMostrarModal(true)} size="md">
-            <i className="bi bi-plus-lg"></i>
-            <span className="d-none d-sm-inline ms-2">Nueva Categoría</span>
+        <Col xs={2} sm={2} md={2} lg={2} className="text-end">
+          <Button variant="primary" onClick={abrirModalCorreo} size="md">
+            <i className="bi bi-envelope"></i>
+            <span className="d-none d-lg-inline ms-2">Enviar por Correo</span>
+          </Button>
+        </Col>
+        <Col xs={2} sm={2} md={2} lg={2} className="text-end">
+          <Button
+            onClick={() => setMostrarModal(true)}
+            size="md"
+          >
+            <i className="bi-plus-lg"></i>
+            <span className="d-none d-lg-inline ms-2">Nueva Categoría</span>
           </Button>
         </Col>
       </Row>
@@ -228,6 +321,7 @@ const Categorias = () => {
         setToast={setToast}
         cargarCategorias={cargarCategorias}
       />
+
       {/* Paginación */}
       {categoriasFiltradas.length > 0 && (
         <Paginacion
@@ -238,11 +332,22 @@ const Categorias = () => {
           establecerRegistrosPorPagina={establecerRegistrosPorPagina}
         />
       )}
+
       <NotificacionOperacion
         mostrar={toast.mostrar}
         mensaje={toast.mensaje}
         tipo={toast.tipo}
         onCerrar={() => setToast({ ...toast, mostrar: false })}
+      />
+
+      <ModalEnvioCorreoCategorias
+        mostrarModalCorreo={mostrarModalCorreo}
+        setMostrarModalCorreo={setMostrarModalCorreo}
+        emailDestino={emailDestino}
+        setEmailDestino={setEmailDestino}
+        enviandoCorreo={enviandoCorreo}
+        enviarCorreoCategorias={enviarCorreoCategorias}
+        totalCategorias={categorias.length}
       />
     </Container>
   );

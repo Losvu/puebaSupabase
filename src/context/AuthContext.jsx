@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../database/supabaseconfig';
 
 const AuthContext = createContext();
@@ -8,64 +8,14 @@ export const AuthProvider = ({ children }) => {
     const [permisos, setPermisos] = useState({});
     const [cargando, setCargando] = useState(true);
 
-    useEffect(() => {
-        // Bandera mágica para controlar la estabilidad
-        let isMounted = true; 
-
-        const inicializarAuth = async () => {
-            try {
-                // 1. Obtener la sesión actual de golpe
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                if (!isMounted) return;
-
-                if (session && session.user) {
-                    setUsuario(session.user);
-                    // Cargamos los permisos pasando la bandera de control
-                    await cargarPermisosDelUsuario(session.user.email, isMounted);
-                } else {
-                    setUsuario(null);
-                    setPermisos({});
-                }
-            } catch (error) {
-                console.error("Error inicializando auth:", error);
-            } finally {
-                if (isMounted) setCargando(false);
-            }
-        };
-
-        inicializarAuth();
-
-        // 2. Escuchar cambios de sesión reales (Login / Logout / Token refrescado)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (!isMounted) return;
-
-            if (session && session.user) {
-                setUsuario(session.user);
-                await cargarPermisosDelUsuario(session.user.email, isMounted);
-            } else {
-                setUsuario(null);
-                setPermisos({});
-                localStorage.removeItem("usuario-supabase");
-            }
-            setCargando(false);
-        });
-
-        // Limpieza: cuando React destruye/remonta el componente, desactivamos la bandera
-        return () => {
-            isMounted = false;
-            subscription.unsubscribe();
-        };
-    }, []);
-
-    // Pasamos 'isMounted' para asegurarnos de no actualizar estados si el componente mutó
-    const cargarPermisosDelUsuario = async (userEmail, isMounted = true) => {
+    // 1. Usamos useCallback para que la función sea estable y no provoque ejecuciones infinitas
+    const cargarPermisosDelUsuario = useCallback(async (userEmail, isMounted) => {
         if (!userEmail) return;
         
         try {
             localStorage.setItem("usuario-supabase", userEmail);
 
-            // Consulta 1: Buscar empleado
+            // Consulta 1: Buscar tipo de empleado
             const { data: empleadoData, error: empleadoError } = await supabase
                 .from('empleados')
                 .select('tipo_empleado')
@@ -73,12 +23,10 @@ export const AuthProvider = ({ children }) => {
                 .maybeSingle();
 
             if (empleadoError) throw empleadoError;
-
-            // Si el componente se desmontó en medio de la consulta de red, frenamos aquí
             if (!isMounted) return; 
 
             if (empleadoData && empleadoData.tipo_empleado) {
-                // Consulta 2: Buscar sus permisos por rol
+                // Consulta 2: Buscar el mapa JSONB de permisos
                 const { data: permisosData, error: permisosError } = await supabase
                     .from('permisos')
                     .select('permisos')
@@ -87,19 +35,57 @@ export const AuthProvider = ({ children }) => {
 
                 if (permisosError) throw permisosError;
 
-                // Si todo está en orden y el componente sigue vivo, guardamos
                 if (isMounted && permisosData && permisosData.permisos) {
-                    setPermisos(permisosData.permisos);
+                    // Control estricto: Solo actualizamos si el string JSON cambió
+                    setPermisos((prev) => {
+                        if (JSON.stringify(prev) === JSON.stringify(permisosData.permisos)) {
+                            return prev; // Mismo objeto, evita re-render redundante
+                        }
+                        return permisosData.permisos;
+                    });
                 }
             }
         } catch (error) {
-            // Ignoramos los AbortError silenciosos de la consola para mantenerla limpia
             if (error.message?.includes('AbortError') || error.name === 'AbortError') return;
-            
-            console.error("Error en base de datos cargando permisos:", error);
+            console.error("Error cargando permisos:", error);
             if (isMounted) setPermisos({});
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        // La regla de oro con Supabase v2+: onAuthStateChange ya se dispara automáticamente
+        // con el estado inicial en el momento en que te suscribes. No hace falta meter un getSession() manual.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!isMounted) return;
+
+            // Log de control por si necesitas debuggear en la consola
+            console.log(`[AuthContext] Evento: ${event}`, session?.user?.email || 'Sin sesión');
+
+            if (session && session.user) {
+                // Control estricto del usuario para no romper el estado si es el mismo
+                setUsuario((prevUser) => {
+                    if (prevUser?.id === session.user.id) return prevUser;
+                    return session.user;
+                });
+                
+                await cargarPermisosDelUsuario(session.user.email, isMounted);
+            } else {
+                setUsuario(null);
+                setPermisos({});
+                localStorage.removeItem("usuario-supabase");
+            }
+            
+            // Apagamos la carga una vez procesado el evento inicial o cualquier cambio legítimo
+            if (isMounted) setCargando(false);
+        });
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
+    }, [cargarPermisosDelUsuario]);
 
     const tienePermiso = (nombrePermiso) => {
         if (!permisos) return false;
@@ -118,7 +104,15 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{ usuario, permisos, tienePermiso, login, logout }}>
-            {!cargando && children}
+            {cargando ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8f9fa' }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            ) : (
+                children
+            )}
         </AuthContext.Provider>
     );
 };
