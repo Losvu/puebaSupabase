@@ -5,7 +5,8 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 const TablaCategorias = ({
   categorias,
   abrirModalEdicion,
-  abrirModalEliminacion
+  abrirModalEliminacion,
+  copiarCategoria
 }) => {
   // Si no hay categorías, mostramos un mensaje amigable en lugar de un spinner 
   // (porque el spinner principal ya lo maneja el componente padre)
@@ -44,12 +45,21 @@ const TablaCategorias = ({
               >
                 <i className="bi bi-pencil"></i>
               </Button>
-
+              <Button
+                variant="outline-success"
+                size="sm"
+                className="m-1"
+                onClick={() => copiarCategoria(categoria)}
+                title="Copiar al portapapeles"
+              >
+                <i className="bi bi-clipboard"></i>
+              </Button>
               <Button
                 variant="outline-danger"
                 size="sm"
                 onClick={() => abrirModalEliminacion(categoria)}
               >
+
                 <i className="bi bi-trash"></i>
               </Button>
             </td>

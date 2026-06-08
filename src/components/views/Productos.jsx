@@ -7,6 +7,7 @@ import ModalRegistroProducto from "../productos/ModalRegistroProducto";
 import ModalEdicionProducto from "../productos/ModalEdicionProducto";
 import ModalEliminacionProducto from "../productos/ModalEliminacionProducto";
 import TarjetaProducto from "../productos/TarjetasProductos";
+import ModalQRProducto from "../productos/ModalQRProducto";
 
 const Productos = () => {
   // --- ESTADOS DE DATOS ---
@@ -22,6 +23,8 @@ const Productos = () => {
   const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false);
   const [mostrarModalEliminacion, setMostrarModalEliminacion] = useState(false);
   const [toast, setToast] = useState({ mostrar: false, mensaje: "", tipo: "" });
+  const [mostrarModalQR, setMostrarModalQR] = useState(false);
+  const [productoQR, setProductoQR] = useState(null);
 
   // --- ESTADOS DE OBJETOS ---
   const [nuevoProducto, setNuevoProducto] = useState({
@@ -228,6 +231,20 @@ const Productos = () => {
     }
   };
 
+  const generarQRImagen = (producto) => {
+    if (!producto?.url_imagen) {
+      setToast({
+        mostrar: true,
+        mensaje: "Este producto no tiene imagen asociada",
+        tipo: "advertencia"
+      });
+      return;
+    }
+
+    setProductoQR(producto);
+    setMostrarModalQR(true);
+  };
+
   const abrirModalEliminacion = (producto) => {
     setProductoAEliminar(producto);
     setMostrarModalEliminacion(true);
@@ -249,7 +266,7 @@ const Productos = () => {
     <Container className="mt-5">
       <Row className="align-items-center mb-4">
         <Col>
-         <Col>......</Col>
+          <Col>......</Col>
           <Col>......</Col>
           <h3><i className="bi-bag-heart-fill me-2"></i> Productos</h3>
         </Col>
@@ -287,6 +304,7 @@ const Productos = () => {
           productos={productosFiltrados}
           abrirModalEdicion={abrirModalEdicion}
           abrirModalEliminacion={abrirModalEliminacion}
+          generarQRImagen={generarQRImagen}
         />
       )}
 
@@ -299,6 +317,12 @@ const Productos = () => {
         manejoCambioArchivo={manejoCambioArchivo}
         agregarProducto={agregarProducto}
         categorias={categorias}
+      />
+
+      <ModalQRProducto
+        mostrar={mostrarModalQR}
+        onHide={() => setMostrarModalQR(false)}
+        producto={productoQR}
       />
 
       <ModalEdicionProducto

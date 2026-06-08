@@ -5,7 +5,8 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 const TarjetaProducto = ({
   productos,
   abrirModalEdicion,
-  abrirModalEliminacion
+  abrirModalEliminacion,
+  generarQRImagen
 }) => {
   const [cargando, setCargando] = useState(true);
   const [idTarjetaActiva, setIdTarjetaActiva] = useState(null);
@@ -54,21 +55,20 @@ const TarjetaProducto = ({
                 aria-label={`Producto ${producto.nombre_producto}`}
               >
                 <Card.Body
-                  className={`p-2 tarjeta-categoria-cuerpo ${
-                    tarjetaActiva
+                  className={`p-2 tarjeta-categoria-cuerpo ${tarjetaActiva
                       ? "tarjeta-categoria-cuerpo-activo"
                       : "tarjeta-categoria-cuerpo-inactivo"
-                  }`}
+                    }`}
                 >
                   <Row className="align-items-center gx-3">
                     {/* Sección de Imagen o Icono */}
                     <Col xs={2} className="px-2">
                       <div className="bg-light d-flex align-items-center justify-content-center rounded tarjeta-categoria-placeholder-imagen" style={{ overflow: 'hidden' }}>
                         {producto.url_imagen ? (
-                          <img 
-                            src={producto.url_imagen} 
-                            alt={producto.nombre_producto} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          <img
+                            src={producto.url_imagen}
+                            alt={producto.nombre_producto}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         ) : (
                           <i className="bi bi-box text-muted fs-3"></i>
@@ -132,6 +132,19 @@ const TarjetaProducto = ({
                         aria-label={`Eliminar ${producto.nombre_producto}`}
                       >
                         <i className="bi bi-trash"></i>
+                      </Button>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => {
+                          generarQRImagen(producto);
+                          if (typeof setModoEdicion === "function") {
+                            setIdTarjetaActiva(null);
+                          }
+                        }}
+                        title="Generar código QR de la imagen"
+                      >
+                        <i className="bi bi-qr-code"></i>
                       </Button>
                     </div>
                   </div>
