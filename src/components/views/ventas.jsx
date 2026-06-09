@@ -3,7 +3,7 @@ import { Container, Row, Col, Button, Spinner } from "react-bootstrap";
 import { supabase } from "../database/supabaseconfig";
 import NotificacionOperacion from "../NotificacionOperacion";
 import CuadroBusquedas from "../busquedas/CuadroBusquedas";
-import Paginacion from "../ordenamiento/Paginacion";
+import Paginacion from "../ordenamiento/paginacion";
 import TablaVentas from "../ventas/TablaVentas";
 import TarjetaVenta from "../ventas/TarjetaVenta";
 import FormularioVenta from "../ventas/FormularioVenta";
