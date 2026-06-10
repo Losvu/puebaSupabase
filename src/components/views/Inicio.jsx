@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Container, Row, Col, Card, Spinner, Form, Button } from "react-bootstrap";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,9 +6,12 @@ import {
 } from "recharts";
 import { supabase } from "../database/supabaseconfig";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 
 // Constantes fuera del componente para evitar re-renderizados innecesarios
-const COLORES = ["#5e26b2", "#39ff95", "#ff6bc6", "#8b46ff", "#00d4ff", "#ffd93d"];
+const COLORES = ["#5e26b", "#39ff95", "#ff6bc6", "#8b46ff", "#00d4ff", "#ffd93d"];
 
 const Inicio = () => {
   const [cargando, setCargando] = useState(true);
@@ -35,7 +38,7 @@ const Inicio = () => {
       setCargando(true);
       const inicioRango = `${desde} 00:00:00`;
       const finRango = `${hasta} 23:59:59`;
-      
+
       const { data: ventas, error } = await supabase
         .from("ventas")
         .select("id_venta, total, fecha_venta, metodo_pago")
@@ -177,6 +180,150 @@ const Inicio = () => {
     }
   };
 
+  const generarPdfVentasHora = async () => {
+    try {
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      //Título y fecha
+      pdf.setFontSize(18);
+      pdf.setTextColor('#33B775');
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Reporte de Ventas por Hora", 14, 15);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor('#000000');
+      pdf.setFontSize(10);
+      pdf.text(`Periodo: ${fechaDesde} - ${fechaHasta}`, 14, 22);
+
+      // Imagen del gráfico
+      const canvas = await html2canvas(graficoHoraRef.current);
+      const imagen = canvas.toDataURL('image/png');
+      pdf.addImage(imagen, "PNG", 10, 30, 190, 80);
+
+      // Resumen general
+      pdf.setFontSize(14);
+      pdf.setTextColor('#33B775');
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Resumen General", 14, 115);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor('#000000');
+      pdf.setFontSize(10);
+
+      pdf.text(`Total Ventas: C$ ${estadisticas.totalVentas.toFixed(2)}`, 14, 125);
+      pdf.text(`Ventas Efectivo: C$ ${estadisticas.ventasEfectivo.toFixed(2)}`, 14, 132);
+      pdf.text(`Ventas Tarjeta: C$ ${estadisticas.ventasTarjeta.toFixed(2)}`, 14, 139);
+      pdf.text(`Productos Vendidos: ${estadisticas.productosVendidos}`, 14, 146);
+      pdf.text(`Cantidad Ventas: ${estadisticas.cantidadVentas}`, 14, 153);
+
+      // Tabla de ventas por hora
+      const filas = estadisticas.ventasPorHora.map(item => [
+        item.hora,
+        `C$ ${item.total}`
+      ]);
+
+      autoTable(pdf, {
+        startY: 160,
+        head: [["Hora", "Monto Acumulado"]],
+        body: filas
+      });
+
+      // Descargar PDF
+      const fechaActual = new Date().toLocaleDateString("en-CA", { timeZone: "America/Managua" });
+      pdf.save(`VentasHora_${fechaDesde}_${fechaHasta}_Generado_${fechaActual}.pdf`);
+
+    } catch (error) {
+      console.error(error);
+      alert('Error generando PDF');
+    }
+  };
+
+  // 9. Reporte PDF: Ventas por Categoría
+const generarPdfVentasCategoria = async () => {
+  try {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Título y fecha
+    pdf.setFontSize(18);
+    pdf.setTextColor('#33B775');
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Reporte de Ventas por Categoría", 14, 15);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor('#000000');
+    pdf.setFontSize(10);
+    pdf.text(`Periodo: ${fechaDesde} - ${fechaHasta}`, 14, 22);
+    
+    // Imagen del gráfico de pastel
+    const canvas = await html2canvas(graficoCategoriaRef.current);
+    const imagen = canvas.toDataURL('image/png');
+    pdf.addImage(imagen, "PNG", 10, 30, 190, 90);
+    
+    // Tabla de desglose por categoría
+    const filas = estadisticas.ventasPorCategoria.map(item => [
+      item.name,
+      `C$ ${item.value.toFixed(2)}`
+    ]);
+    
+    autoTable(pdf, {
+      startY: 130,
+      head: [["Categoría", "Monto Total Vendido"]],
+      body: filas.length > 0 ? filas : [["Sin datos", "C$ 0.00"]],
+    });
+    
+    const fechaActual = new Date().toLocaleDateString("en-CA", { timeZone: "America/Managua" });
+    pdf.save(`VentasCategoria_${fechaDesde}_${fechaHasta}_Generado_${fechaActual}.pdf`);
+    
+  } catch (error) {
+    console.error(error);
+    alert('Error generando PDF de categorías');
+  }
+};
+
+// 10. Reporte PDF: Estadística General (Dashboard Completo)
+const generarPdfGeneral = async () => {
+  try {
+    setCargando(true); // Mostramos spinner temporal mientras procesa la captura
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Capturamos TODO el contenedor principal
+    const canvas = await html2canvas(contenedorGeneralRef.current, {
+      scale: 2, // Mejora la calidad del texto capturado
+      useCORS: true
+    });
+    
+    const imagen = canvas.toDataURL('image/png');
+    
+    // Ajustamos la imagen larga al ancho de la página A4 (210mm menos márgenes = 190mm)
+    const anchoPdf = 190;
+    const altoPdf = (canvas.height * anchoPdf) / canvas.width;
+    
+    // Título superior
+    pdf.setFontSize(16);
+    pdf.setTextColor('#33B775');
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Reporte Ejecutivo General - HospyAries", 14, 15);
+    pdf.setFontSize(9);
+    pdf.setTextColor('#666666');
+    pdf.text(`Generado el: ${new Date().toLocaleString("es-NI")}`, 14, 20);
+    
+    // Añadimos la captura completa del Dashboard
+    pdf.addImage(imagen, "PNG", 10, 25, anchoPdf, altoPdf);
+    
+    const fechaActual = new Date().toLocaleDateString("en-CA", { timeZone: "America/Managua" });
+    pdf.save(`Reporte_General_${fechaDesde}_${fechaHasta}_${fechaActual}.pdf`);
+    
+  } catch (error) {
+    console.error(error);
+    alert('Error generando PDF General');
+  } finally {
+    setCargando(false);
+  }
+};
+
+
+const graficoHoraRef = useRef(null);
+const graficoCategoriaRef = useRef(null); // 🆕 Para el gráfico de pastel
+const contenedorGeneralRef = useRef(null); // 🆕 Para todo el dashboard
+
   // 3. Efectos de React (Hooks siempre arriba de los retornos de JSX)
   useEffect(() => {
     cargarDatos(fechaDesde, fechaHasta);
@@ -193,15 +340,16 @@ const Inicio = () => {
   }
 
   // Retorno principal de la interfaz
-  return (
-    <Container className="mt-4">
+ return (
+    // ✅ PASO 10: Envolvemos todo el contenido en la referencia general
+    <Container className="mt-4" ref={contenedorGeneralRef}>
       {/* Encabezado */}
       <div className="mb-4">
         <h2><i className="bi bi-house-fill me-2"></i> Dashboard</h2>
         <h6 className="text-muted">Estadísticas del Negocio</h6>
       </div>
 
-      {/* Filtros de Fecha y Botón de Excel */}
+      {/* Filtros de Fecha y Botones de Reportes Superiores */}
       <Row className="mb-4 align-items-end">
         <Col xs={12} sm={4} md={3} className="mb-3 mb-sm-0">
           <Form.Group>
@@ -215,10 +363,17 @@ const Inicio = () => {
             <Form.Control type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
           </Form.Group>
         </Col>
-        <Col xs={12} sm={4} md={3}>
+        <Col xs={12} sm={4} md={3} className="mb-2 mb-sm-0">
           <Button variant="success" onClick={descargarExcel} className="w-100">
             <i className="bi bi-file-earmark-excel me-2"></i>
             Descargar Excel
+          </Button>
+        </Col>
+        {/* ✅ BOTÓN REQUERIDO 10: Reporte PDF General a la par de Excel */}
+        <Col xs={12} sm={4} md={3}>
+          <Button variant="danger" onClick={generarPdfGeneral} className="w-100">
+            <i className="bi bi-file-earmark-pdf me-2"></i>
+            Descargar PDF General
           </Button>
         </Col>
       </Row>
@@ -264,7 +419,7 @@ const Inicio = () => {
         {/* Gráfico de Líneas */}
         <Col xs={12} lg={8}>
           <Card className="shadow border-0">
-            <Card.Body>
+            <Card.Body ref={graficoHoraRef}>
               <h5 className="mb-3 fw-bold">Ventas por Hora</h5>
               <ResponsiveContainer width="100%" height={360}>
                 <LineChart data={estadisticas.ventasPorHora}>
@@ -276,13 +431,20 @@ const Inicio = () => {
                 </LineChart>
               </ResponsiveContainer>
             </Card.Body>
+            <div className="p-3 text-center">
+              <Button variant="outline-danger" onClick={generarPdfVentasHora}>
+                <i className="bi bi-file-earmark-pdf me-2"></i>
+                Descargar PDF
+              </Button>
+            </div>
           </Card>
         </Col>
 
         {/* Gráfico de Pastel */}
         <Col xs={12} lg={4}>
           <Card className="shadow border-0">
-            <Card.Body>
+            {/* ✅ PASO 9: Asignamos la referencia al cuerpo del gráfico de categorías */}
+            <Card.Body ref={graficoCategoriaRef}>
               <h5 className="mb-3 fw-bold">Ventas por Categoría</h5>
               <ResponsiveContainer width="100%" height={360}>
                 <PieChart>
@@ -304,6 +466,13 @@ const Inicio = () => {
                 </PieChart>
               </ResponsiveContainer>
             </Card.Body>
+            {/* ✅ BOTÓN REQUERIDO 9: Descargar PDF específico del gráfico de categorías */}
+            <div className="p-3 text-center">
+              <Button variant="outline-danger" onClick={generarPdfVentasCategoria}>
+                <i className="bi bi-file-earmark-pdf me-2"></i>
+                Descargar PDF
+              </Button>
+            </div>
           </Card>
         </Col>
       </Row>
